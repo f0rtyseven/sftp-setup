@@ -1,0 +1,60 @@
+1. Create a separate group for all the sftp users:
+	
+	groupadd sftpusers
+
+2. Create new user, with no home directory and nologin shell belonging to the previously created group. We are setting the nologin shell  to prevent the user from being able to SSH into the server.:
+	
+	useradd -g sftpusers -M -s /sbin/nologin newuser
+	passwd newuser
+	
+  2.1. 	Verify that the user got created correctly:
+        
+	grep newuser /etc/passwd
+
+3. Modify the /etc/ssh/sshd_config file. Please modify the exact file. There is another file name "ssh_config" in the same directory.
+
+  3.1.	Comment out the following line by putting a '#' at the beginning of the line:
+        
+	Subsystem       sftp    /usr/libexec/openssh/sftp-server
+  
+  3.2.	Put the following line next to the commented line in the previous step:
+    
+        Subsystem       sftp    internal-sftp
+
+4. Specify the Chroot directory for the group by appending the following lines to the /etc/ssh/sshd_config file:
+
+	Match Group sftpusers
+        ChrootDirectory /sftp/%u
+        ForceCommand internal-sftp
+
+  4.1. Also check if PasswordAuthentication is enabled if you want to enable password login. I didn't want to setup key based authentication so I simply used "PasswordAuthentication yes".
+
+Tip: On CentOs system I was facing "Couldn't get handle: Permission denied" error. This was caused by SELinux. So I set it to permissive mode using "setenforce 0" command and everything went fine.
+
+5. Make the chroot directories. It is very important that the ownerships are proper for the chroot jail to work. The 'ls -ld' command can be used to check the ownership info of the directories. Use 'chown -R' command to change the ownership of the directories recursively.
+
+  5.1.	mkdir /sftp ( check/change ownership to: 'root:root' )
+  5.2.	mkdir /sftp/newuser ( check/change ownership to: 'root:root' )
+  5.3.	mkdir /sftp/newuser/upload ( check/change ownership to: 'newuser:sftpusers' )
+
+6. Check sshd configuration proper on not. Running the following command will check the configuration file for syntax errors and otpu the result. This is very important as a bad configuration will stop 'sshd' to start after a restart. Also many unintentional typing errors can be avoided by simply checking the configuration file.
+
+	sshd -t
+
+7. If the output says that it's fine we need to restart the sshd service.
+
+	service sshd restart
+
+
+Now if we need to create another user for SFTP only access to a chroot jailed environment we need to do the following For each new user:
+
+1. Create the new user belonging to the same sftpusers group we created earlier:
+
+	useradd -g sftpusers -M -s /sbin/nologin another-user
+
+2. Create and change ownership of the chroot directory:
+
+	mkdir -p /sftp/another-user/upload
+	chown another-user:sftpusers /sftp/another-user/upload
+
+That's it. You're done. Hope it helped.
