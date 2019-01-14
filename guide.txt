@@ -1,3 +1,5 @@
+Here's a step-by-stp guide to setup SFTP with chroot jail.
+
 1. Create a separate group for all the sftp users:
 	
 	groupadd sftpusers
@@ -57,4 +59,4 @@ Now if we need to create another user for SFTP only access to a chroot jailed en
 	mkdir -p /sftp/another-user/upload
 	chown another-user:sftpusers /sftp/another-user/upload
 
-That's it. You're done. Hope it helped.
+That's it. You're done. Hope it helped. If you have any qustions please reach out to me.
